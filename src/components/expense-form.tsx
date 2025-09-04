@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface ExpenseFormProps {
-  onAddExpense: (expense: Omit<Expense, 'id'>) => void;
+  onAddExpense: (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => void;
   editingExpense?: Expense | null;
   onCancelEdit?: () => void;
 }
@@ -29,9 +29,9 @@ export function ExpenseForm({ onAddExpense, editingExpense, onCancelEdit }: Expe
     descricao: '',
     observacao: '',
     categoria: '',
-    tipo: 'Saida' as 'Receita' | 'Saida',
+    tipo: 'Saida',
     valor: '',
-    status: 'Aberto' as 'Aberto' | 'Fechado',
+    status: 'Aberto',
     codigo_barras: ''
   });
 
@@ -44,7 +44,7 @@ export function ExpenseForm({ onAddExpense, editingExpense, onCancelEdit }: Expe
         observacao: editingExpense.observacao,
         categoria: editingExpense.categoria,
         tipo: editingExpense.tipo,
-        valor: editingExpense.valor.toString(),
+        valor: (editingExpense.valor || 0).toString(),
         status: editingExpense.status,
         codigo_barras: editingExpense.codigo_barras || ''
       });
@@ -74,7 +74,7 @@ export function ExpenseForm({ onAddExpense, editingExpense, onCancelEdit }: Expe
       return;
     }
 
-    const expense: Omit<Expense, 'id'> = {
+    const expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
       ...formData,
       valor: parseFloat(formData.valor)
     };
@@ -168,7 +168,7 @@ export function ExpenseForm({ onAddExpense, editingExpense, onCancelEdit }: Expe
 
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo</Label>
-              <Select value={formData.tipo} onValueChange={(value: 'Receita' | 'Saida') => setFormData({ ...formData, tipo: value })}>
+              <Select value={formData.tipo} onValueChange={(value: string) => setFormData({ ...formData, tipo: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -195,13 +195,14 @@ export function ExpenseForm({ onAddExpense, editingExpense, onCancelEdit }: Expe
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: 'Aberto' | 'Fechado') => setFormData({ ...formData, status: value })}>
+              <Select value={formData.status || 'Aberto'} onValueChange={(value: string) => setFormData({ ...formData, status: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Aberto">Aberto</SelectItem>
                   <SelectItem value="Fechado">Fechado</SelectItem>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

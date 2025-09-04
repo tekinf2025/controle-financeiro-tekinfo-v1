@@ -65,8 +65,8 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
 
   const filteredExpenses = useMemo(() => {
     const filtered = expenses.filter((expense) => {
-      const matchesSearch = expense.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           expense.observacao.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (expense.descricao || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (expense.observacao || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = filterCategory === "all" || expense.categoria === filterCategory;
       const matchesStatus = filterStatus === "all" || expense.status === filterStatus;
       const matchesType = filterType === "all" || expense.tipo === filterType;
@@ -83,8 +83,8 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
 
     // Sort by date
     return filtered.sort((a, b) => {
-      const dateA = parseDate(a.data_vencimento);
-      const dateB = parseDate(b.data_vencimento);
+      const dateA = parseDate(a.data_vencimento || "");
+      const dateB = parseDate(b.data_vencimento || "");
       
       if (sortOrder === "desc") {
         return dateB.getTime() - dateA.getTime(); // Z-A (mais recente primeiro)
@@ -94,7 +94,8 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
     });
   }, [expenses, searchTerm, filterCategory, filterStatus, filterType, startDate, endDate, sortOrder]);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null) => {
+    if (value === null || value === undefined) return "R$ 0,00";
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -111,7 +112,7 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
     return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string | null) => {
     return status === 'Fechado' ? (
       <CheckCircle className="h-4 w-4 text-success" />
     ) : (
@@ -119,7 +120,7 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
     );
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string | null) => {
     return type === 'Receita' ? (
       <TrendingUp className="h-4 w-4 text-success" />
     ) : (
@@ -402,9 +403,9 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center space-x-2">
                         {getTypeIcon(expense.tipo)}
-                        <h4 className="font-medium">{expense.descricao}</h4>
+                        <h4 className="font-medium">{expense.descricao || "Sem descrição"}</h4>
                         <Badge variant="outline" className="text-xs">
-                          {expense.categoria}
+                          {expense.categoria || "Sem categoria"}
                         </Badge>
                       </div>
                       
@@ -422,8 +423,8 @@ export function ExpenseList({ expenses, onEditExpense, onDeleteExpense, onToggle
                           </div>
                         )}
                         <div className="flex items-center space-x-1">
-                          {getStatusIcon(expense.status)}
-                          <span>{expense.status}</span>
+                          {getStatusIcon(expense.status || "Pendente")}
+                          <span>{expense.status || "Pendente"}</span>
                         </div>
                       </div>
                     </div>

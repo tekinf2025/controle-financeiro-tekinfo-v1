@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { 
   Wallet,
   TrendingUp, 
@@ -14,21 +14,18 @@ import { ExpenseForm } from "@/components/expense-form";
 import { ExpenseList } from "@/components/expense-list";
 import { ChartsDashboard } from "@/components/charts/charts-dashboard";
 import { Expense, ExpenseSummary } from "@/types/expense";
-import { useToast } from "@/hooks/use-toast";
-
-const initialExpenses: Expense[] = [];
+import { useExpenses } from "@/hooks/use-expenses";
 
 const Index = () => {
-  const { toast } = useToast();
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const { expenses, loading, addExpense, updateExpense, deleteExpense, toggleExpenseStatus } = useExpenses();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const summary: ExpenseSummary = useMemo(() => {
     const receitas = expenses.filter(e => e.tipo === 'Receita');
     const despesas = expenses.filter(e => e.tipo === 'Saida');
     
-    const totalReceitas = receitas.reduce((sum, e) => sum + e.valor, 0);
-    const totalDespesas = despesas.reduce((sum, e) => sum + e.valor, 0);
+    const totalReceitas = receitas.reduce((sum, e) => sum + (e.valor || 0), 0);
+    const totalDespesas = despesas.reduce((sum, e) => sum + (e.valor || 0), 0);
     const despesasAbertas = despesas.filter(e => e.status === 'Aberto').length;
     const despesasFechadas = despesas.filter(e => e.status === 'Fechado').length;
 
@@ -41,32 +38,16 @@ const Index = () => {
     };
   }, [expenses]);
 
-  const handleAddExpense = (newExpense: Omit<Expense, 'id'>) => {
+  const handleAddExpense = async (newExpense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingExpense) {
       // Edit existing expense
-      const updatedExpense: Expense = {
-        ...newExpense,
-        id: editingExpense.id
-      };
-      setExpenses(prev => prev.map(exp => 
-        exp.id === editingExpense.id ? updatedExpense : exp
-      ));
-      setEditingExpense(null);
-      toast({
-        title: "Lançamento atualizado!",
-        description: "As alterações foram salvas com sucesso.",
-      });
+      const success = await updateExpense(editingExpense.id, newExpense);
+      if (success) {
+        setEditingExpense(null);
+      }
     } else {
       // Add new expense
-      const expense: Expense = {
-        ...newExpense,
-        id: Date.now().toString()
-      };
-      setExpenses(prev => [expense, ...prev]);
-      toast({
-        title: "Lançamento criado!",
-        description: "Novo lançamento adicionado com sucesso.",
-      });
+      await addExpense(newExpense);
     }
   };
 
@@ -74,28 +55,19 @@ const Index = () => {
     setEditingExpense(expense);
   };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(exp => exp.id !== id));
-    toast({
-      title: "Lançamento excluído!",
-      description: "O lançamento foi removido com sucesso.",
-    });
+  const handleDeleteExpense = async (id: string) => {
+    await deleteExpense(id);
   };
 
-  const handleToggleStatus = (id: string) => {
-    setExpenses(prev => prev.map(exp => 
-      exp.id === id 
-        ? { ...exp, status: exp.status === 'Aberto' ? 'Fechado' : 'Aberto' }
-        : exp
-    ));
-    toast({
-      title: "Status atualizado!",
-      description: "Status do lançamento foi alterado.",
-    });
+  const handleToggleStatus = async (id: string) => {
+    await toggleExpenseStatus(id);
   };
 
-  const handleImportExpenses = (newExpenses: Expense[]) => {
-    setExpenses(prev => [...newExpenses, ...prev]);
+  const handleImportExpenses = async (newExpenses: Expense[]) => {
+    // Import expenses to database
+    for (const expense of newExpenses) {
+      await addExpense(expense);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -133,65 +105,72 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto max-w-screen-2xl px-4 py-4 space-y-6">
-
-        {/* Stats Grid */}
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Saldo Atual"
-            value={formatCurrency(summary.saldo)}
-            description={summary.saldo >= 0 ? "Saldo positivo" : "Saldo negativo"}
-            icon={<DollarSign />}
-            variant={summary.saldo >= 0 ? "success" : "destructive"}
-          />
-          
-          <StatsCard
-            title="Total Receitas"
-            value={formatCurrency(summary.totalReceitas)}
-            description="Receitas do período"
-            icon={<TrendingUp />}
-            variant="success"
-          />
-          
-          <StatsCard
-            title="Total Despesas"
-            value={formatCurrency(summary.totalDespesas)}
-            description="Despesas do período"
-            icon={<TrendingDown />}
-            variant="destructive"
-          />
-          
-          <StatsCard
-            title="Contas Abertas"
-            value={summary.despesasAbertas.toString()}
-            description={`${summary.despesasFechadas} já pagas`}
-            icon={<CreditCard />}
-            variant="warning"
-          />
-        </section>
-
-        {/* Charts Dashboard */}
-        <ChartsDashboard expenses={expenses} />
-
-        {/* Form and List Grid */}
-        <section className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <ExpenseForm 
-              onAddExpense={handleAddExpense}
-              editingExpense={editingExpense}
-              onCancelEdit={() => setEditingExpense(null)}
-            />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
-          
-          <div className="lg:col-span-2">
-            <ExpenseList 
-              expenses={expenses}
-              onEditExpense={handleEditExpense}
-              onDeleteExpense={handleDeleteExpense}
-              onToggleStatus={handleToggleStatus}
-              onImportExpenses={handleImportExpenses}
-            />
-          </div>
-        </section>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatsCard
+                title="Saldo Atual"
+                value={formatCurrency(summary.saldo)}
+                description={summary.saldo >= 0 ? "Saldo positivo" : "Saldo negativo"}
+                icon={<DollarSign />}
+                variant={summary.saldo >= 0 ? "success" : "destructive"}
+              />
+              
+              <StatsCard
+                title="Total Receitas"
+                value={formatCurrency(summary.totalReceitas)}
+                description="Receitas do período"
+                icon={<TrendingUp />}
+                variant="success"
+              />
+              
+              <StatsCard
+                title="Total Despesas"
+                value={formatCurrency(summary.totalDespesas)}
+                description="Despesas do período"
+                icon={<TrendingDown />}
+                variant="destructive"
+              />
+              
+              <StatsCard
+                title="Contas Abertas"
+                value={summary.despesasAbertas.toString()}
+                description={`${summary.despesasFechadas} já pagas`}
+                icon={<CreditCard />}
+                variant="warning"
+              />
+            </section>
+
+            {/* Charts Dashboard */}
+            <ChartsDashboard expenses={expenses} />
+
+            {/* Form and List Grid */}
+            <section className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-1">
+                <ExpenseForm 
+                  onAddExpense={handleAddExpense}
+                  editingExpense={editingExpense}
+                  onCancelEdit={() => setEditingExpense(null)}
+                />
+              </div>
+              
+              <div className="lg:col-span-2">
+                <ExpenseList 
+                  expenses={expenses}
+                  onEditExpense={handleEditExpense}
+                  onDeleteExpense={handleDeleteExpense}
+                  onToggleStatus={handleToggleStatus}
+                  onImportExpenses={handleImportExpenses}
+                />
+              </div>
+            </section>
+          </>
+        )}
       </main>
 
       {/* Footer */}

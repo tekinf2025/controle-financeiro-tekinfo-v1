@@ -1,13 +1,15 @@
 export interface Expense {
   id: string;
-  data_vencimento: string;
-  descricao: string;
-  observacao: string;
-  categoria: string;
-  tipo: 'Receita' | 'Saida';
-  valor: number;
-  status: 'Aberto' | 'Fechado';
-  codigo_barras?: string;
+  data_vencimento: string | null;
+  descricao: string | null;
+  observacao: string | null;
+  categoria: string | null;
+  tipo: string | null;
+  valor: number | null;
+  status: string | null;
+  codigo_barras: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ExpenseSummary {

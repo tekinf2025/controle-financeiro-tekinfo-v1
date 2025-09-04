@@ -12,9 +12,9 @@ interface ExpenseCategoriesChartProps {
 export const ExpenseCategoriesChart = ({ expenses }: ExpenseCategoriesChartProps) => {
   const chartData = useMemo(() => {
     const categoryData = expenses
-      .filter(expense => expense.tipo === 'Saida')
+      .filter(expense => expense.tipo === 'Saida' && expense.descricao && expense.valor)
       .reduce((acc, expense) => {
-        const description = expense.descricao;
+        const description = expense.descricao!;
         
         if (!acc[description]) {
           acc[description] = {
@@ -24,7 +24,7 @@ export const ExpenseCategoriesChart = ({ expenses }: ExpenseCategoriesChartProps
           };
         }
         
-        acc[description].valor += expense.valor;
+        acc[description].valor += expense.valor!;
         acc[description].quantidade += 1;
         
         return acc;

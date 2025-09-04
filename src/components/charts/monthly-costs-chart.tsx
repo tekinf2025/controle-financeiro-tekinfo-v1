@@ -12,9 +12,9 @@ interface MonthlyCostsChartProps {
 export const MonthlyCostsChart = ({ expenses }: MonthlyCostsChartProps) => {
   const chartData = useMemo(() => {
     const monthlyData = expenses
-      .filter(expense => expense.tipo === 'Saida')
+      .filter(expense => expense.tipo === 'Saida' && expense.data_vencimento && expense.valor && expense.categoria)
       .reduce((acc, expense) => {
-        const date = new Date(expense.data_vencimento);
+        const date = new Date(expense.data_vencimento!);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         const monthName = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
         
